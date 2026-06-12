@@ -122,6 +122,27 @@ const menu = [
       { name: 'Full Karışık Tost', price: 225 },
     ]
   },
+  {
+    name: 'Soğuk İçecekler',
+    items: [
+      { name: 'Coca Cola', price: 80 },
+      { name: 'Coca Cola Zero', price: 80 },
+      { name: 'Ice Tea (Şeftali / Limon)', price: 80 },
+      { name: 'Uludağ Gazoz', price: 80 },
+      { name: 'Ayran', price: 60 },
+      { name: 'Soda', price: 60 },
+      { name: 'Capri-Sun', price: 60 },
+      { name: 'Su', price: 40 },
+    ]
+  },
+  {
+    name: 'Sıcak İçecekler',
+    items: [
+      { name: 'Çay', price: 40 },
+      { name: 'Türk Kahvesi', price: 80 },
+      { name: 'Filtre Kahve', price: 100 },
+    ]
+  },
 ];
 
 async function main() {
