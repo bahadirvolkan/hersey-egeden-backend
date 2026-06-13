@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
-const { printOrder } = require('../services/printer');
 
 const dbRun = (sql, params = []) => {
   return new Promise((resolve, reject) => {
@@ -72,18 +71,18 @@ router.post('/', async (req, res) => {
     const io = req.app.get('io');
     io.emit('order:created', { order_id, table_id, total_price });
 
-    // Print order (non-blocking) — fetch name+price in one pass
+    // Emit print event — local print-agent listens and prints
     const itemsForPrint = await Promise.all(items.map(async (item) => {
       const m = await dbGet('SELECT name, price FROM menu_items WHERE id = ?', [item.menu_item_id]);
       return { name: m ? m.name : '', quantity: item.quantity, price_at_purchase: m ? m.price : 0 };
     }));
-    printOrder({
+    io.emit('print:order', {
       id: order_id,
       table_number: table.table_number,
       total_price,
       customer_note,
       items: itemsForPrint,
-    }).catch(() => {});
+    });
 
     res.status(201).json({
       success: true,
