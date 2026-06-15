@@ -86,6 +86,28 @@ router.put('/settings/passwords', authMiddleware, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
+// Get all orders for a table (for bill print)
+router.get('/table/:tableId/bill', authMiddleware, async (req, res) => {
+  try {
+    const { tableId } = req.params;
+    const table = await dbGet('SELECT * FROM tables WHERE id = ?', [tableId]);
+    if (!table) return res.status(404).json({ error: 'Table not found' });
+
+    const orders = await dbAll(
+      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(created_at) = DATE('now')`,
+      [tableId]
+    );
+    for (const order of orders) {
+      order.items = await dbAll(`
+        SELECT oi.*, COALESCE(oi.name_override, m.name) as name
+        FROM order_items oi
+        LEFT JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE oi.order_id = ?`, [order.id]);
+    }
+    res.json({ table_number: table.table_number, orders });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
 // Get single order detail (admin)
 router.get('/orders/:id', authMiddleware, async (req, res) => {
   try {
