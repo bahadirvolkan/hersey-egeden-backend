@@ -233,6 +233,74 @@ router.get('/daily-report', authMiddleware, async (req, res) => {
   }
 });
 
+// Daily report detail — saatlik dağılım + top ürünler
+router.get('/daily-report-detail', authMiddleware, async (req, res) => {
+  try {
+    const reportDate = req.query.date || new Date().toLocaleDateString('sv-SE');
+
+    const hourly = await dbAll(`
+      SELECT strftime('%H', datetime(created_at, '+3 hours')) as hour,
+             COUNT(DISTINCT id) as orders,
+             COALESCE(SUM(total_price), 0) as revenue
+      FROM orders
+      WHERE DATE(datetime(created_at, '+3 hours')) = ?
+      GROUP BY hour ORDER BY hour ASC
+    `, [reportDate]);
+
+    const top_items = await dbAll(`
+      SELECT COALESCE(oi.name_override, m.name) as name,
+             SUM(oi.quantity) as quantity,
+             SUM(oi.quantity * oi.price_at_purchase) as revenue
+      FROM order_items oi
+      LEFT JOIN menu_items m ON oi.menu_item_id = m.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE DATE(datetime(o.created_at, '+3 hours')) = ?
+      GROUP BY name ORDER BY quantity DESC LIMIT 10
+    `, [reportDate]);
+
+    res.json({ date: reportDate, hourly, top_items });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
+// Monthly report — günlük döküm + aylık özet + top ürünler
+router.get('/monthly-report', authMiddleware, async (req, res) => {
+  try {
+    const targetMonth = req.query.month || new Date().toLocaleDateString('sv-SE').slice(0, 7);
+
+    const summary = await dbGet(`
+      SELECT COUNT(DISTINCT id) as total_orders,
+             COALESCE(SUM(total_price), 0) as total_revenue,
+             COUNT(DISTINCT table_id) as unique_tables,
+             COUNT(DISTINCT DATE(datetime(created_at, '+3 hours'))) as active_days
+      FROM orders
+      WHERE strftime('%Y-%m', datetime(created_at, '+3 hours')) = ?
+    `, [targetMonth]);
+
+    const daily = await dbAll(`
+      SELECT DATE(datetime(created_at, '+3 hours')) as date,
+             COUNT(DISTINCT id) as total_orders,
+             COALESCE(SUM(total_price), 0) as total_revenue,
+             COUNT(DISTINCT table_id) as unique_tables
+      FROM orders
+      WHERE strftime('%Y-%m', datetime(created_at, '+3 hours')) = ?
+      GROUP BY date ORDER BY date ASC
+    `, [targetMonth]);
+
+    const top_items = await dbAll(`
+      SELECT COALESCE(oi.name_override, m.name) as name,
+             SUM(oi.quantity) as quantity,
+             SUM(oi.quantity * oi.price_at_purchase) as revenue
+      FROM order_items oi
+      LEFT JOIN menu_items m ON oi.menu_item_id = m.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE strftime('%Y-%m', datetime(o.created_at, '+3 hours')) = ?
+      GROUP BY name ORDER BY quantity DESC LIMIT 10
+    `, [targetMonth]);
+
+    res.json({ month: targetMonth, ...summary, daily, top_items });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
 // Delete order (admin password required)
 router.delete('/orders/:id', authMiddleware, async (req, res) => {
   try {
@@ -305,6 +373,17 @@ router.post('/categories', authMiddleware, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
+// Reorder categories
+router.put('/categories/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { order } = req.body;
+    for (const { id, order: o } of order) {
+      await dbRun('UPDATE categories SET "order" = ? WHERE id = ?', [o, id]);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
 // Update category
 router.put('/categories/:id', authMiddleware, async (req, res) => {
   try {
@@ -336,9 +415,11 @@ router.delete('/categories/:id', authMiddleware, async (req, res) => {
 router.post('/menu', authMiddleware, async (req, res) => {
   try {
     const { category_id, name, description, price, image_url } = req.body;
+    const maxOrder = await dbGet('SELECT MAX("order") as m FROM menu_items WHERE category_id = ?', [category_id]);
+    const newOrder = (maxOrder && maxOrder.m != null ? maxOrder.m : 0) + 1;
     const result = await dbRun(
-      'INSERT INTO menu_items (category_id, name, description, price, image_url) VALUES (?, ?, ?, ?, ?)',
-      [category_id, name, description, price, image_url]
+      'INSERT INTO menu_items (category_id, name, description, price, image_url, "order") VALUES (?, ?, ?, ?, ?, ?)',
+      [category_id, name, description, price, image_url, newOrder]
     );
     
     const item = await dbGet('SELECT * FROM menu_items WHERE id = ?', [result.lastID]);
@@ -347,6 +428,17 @@ router.post('/menu', authMiddleware, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: 'Failed to add menu item' });
   }
+});
+
+// Reorder menu items
+router.put('/menu/reorder', authMiddleware, async (req, res) => {
+  try {
+    const { order } = req.body;
+    for (const { id, order: o } of order) {
+      await dbRun('UPDATE menu_items SET "order" = ? WHERE id = ?', [o, id]);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
 });
 
 // Update menu item (Admin)

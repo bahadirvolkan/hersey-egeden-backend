@@ -32,8 +32,8 @@ router.get('/', async (req, res) => {
 
     for (let cat of categories) {
       const sql = showAll
-        ? 'SELECT * FROM menu_items WHERE category_id = ?'
-        : 'SELECT * FROM menu_items WHERE category_id = ? AND is_available = 1';
+        ? 'SELECT * FROM menu_items WHERE category_id = ? ORDER BY "order", id'
+        : 'SELECT * FROM menu_items WHERE category_id = ? AND is_available = 1 ORDER BY "order", id';
       cat.items = await dbAll(sql, [cat.id]);
     }
 

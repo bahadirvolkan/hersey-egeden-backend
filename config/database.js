@@ -26,6 +26,7 @@ function runMigrations(db) {
     `ALTER TABLE categories ADD COLUMN is_available INTEGER DEFAULT 1`,
     `ALTER TABLE orders ADD COLUMN bill_requested_at DATETIME`,
     `ALTER TABLE orders ADD COLUMN closed_at DATETIME`,
+    `ALTER TABLE menu_items ADD COLUMN "order" INTEGER DEFAULT 0`,
   ];
   let i = 0;
   const next = () => {
