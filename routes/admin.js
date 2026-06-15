@@ -94,7 +94,7 @@ router.get('/table/:tableId/bill', authMiddleware, async (req, res) => {
     if (!table) return res.status(404).json({ error: 'Table not found' });
 
     const orders = await dbAll(
-      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(datetime(created_at, '+3 hours')) = DATE(datetime('now', '+3 hours'))`,
+      `SELECT * FROM orders WHERE table_id = ? AND DATE(datetime(created_at, '+3 hours')) = DATE(datetime('now', '+3 hours'))`,
       [tableId]
     );
     for (const order of orders) {
