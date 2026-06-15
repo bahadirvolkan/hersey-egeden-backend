@@ -233,6 +233,23 @@ router.get('/daily-report', authMiddleware, async (req, res) => {
   }
 });
 
+// Delete order (admin password required)
+router.delete('/orders/:id', authMiddleware, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const row = await dbGet("SELECT value FROM settings WHERE key = 'admin_password'");
+    if (!row || password !== row.value) {
+      return res.status(401).json({ error: 'Şifre hatalı' });
+    }
+    await dbRun('DELETE FROM order_items WHERE order_id = ?', [req.params.id]);
+    await dbRun('DELETE FROM orders WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Silinemedi' });
+  }
+});
+
 // Complete order
 router.put('/orders/:id/complete', authMiddleware, async (req, res) => {
   try {
