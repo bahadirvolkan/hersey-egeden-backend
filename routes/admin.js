@@ -94,7 +94,7 @@ router.get('/table/:tableId/bill', authMiddleware, async (req, res) => {
     if (!table) return res.status(404).json({ error: 'Table not found' });
 
     const orders = await dbAll(
-      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(created_at) = DATE('now')`,
+      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(datetime(created_at, '+3 hours')) = DATE(datetime('now', '+3 hours'))`,
       [tableId]
     );
     for (const order of orders) {
@@ -190,7 +190,7 @@ router.get('/orders', authMiddleware, async (req, res) => {
     }
 
     if (date) {
-      conditions.push(`DATE(o.created_at) = ?`);
+      conditions.push(`DATE(datetime(o.created_at, '+3 hours')) = ?`);
       params.push(date);
     }
 
@@ -220,7 +220,7 @@ router.get('/daily-report', authMiddleware, async (req, res) => {
         COALESCE(SUM(total_price), 0) as total_revenue,
         COUNT(DISTINCT table_id) as unique_tables
       FROM orders
-      WHERE DATE(created_at) = ?
+      WHERE DATE(datetime(created_at, '+3 hours')) = ?
     `, [reportDate]);
 
     res.json({

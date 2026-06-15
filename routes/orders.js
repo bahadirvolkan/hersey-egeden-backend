@@ -121,7 +121,7 @@ router.get('/table/:tableId', async (req, res) => {
   try {
     const { tableId } = req.params;
     const orders = await dbAll(
-      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(created_at) = DATE('now') ORDER BY created_at DESC`,
+      `SELECT * FROM orders WHERE table_id = ? AND status != 'closed' AND DATE(datetime(created_at, '+3 hours')) = DATE(datetime('now', '+3 hours')) ORDER BY created_at DESC`,
       [tableId]
     );
     for (let order of orders) {

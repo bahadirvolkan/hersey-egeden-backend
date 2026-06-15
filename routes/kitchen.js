@@ -83,7 +83,7 @@ router.post('/table/:tableId/close', kitchenAuth, async (req, res) => {
     await dbRun('UPDATE tables SET status = ? WHERE id = ?', ['available', tableId]);
     await dbRun(
       `UPDATE orders SET status = 'closed', closed_at = CURRENT_TIMESTAMP
-       WHERE table_id = ? AND status IN ('pending','completed') AND DATE(created_at,'localtime') = DATE('now','localtime')`,
+       WHERE table_id = ? AND status IN ('pending','completed') AND DATE(datetime(created_at, '+3 hours')) = DATE(datetime('now', '+3 hours'))`,
       [tableId]
     );
     const io = req.app.get('io');
@@ -105,7 +105,7 @@ router.get('/completed', kitchenAuth, async (req, res) => {
       FROM orders o
       JOIN tables t ON o.table_id = t.id
       WHERE o.status IN ('completed', 'closed')
-        AND DATE(o.created_at, 'localtime') = DATE('now', 'localtime')
+        AND DATE(datetime(o.created_at, '+3 hours')) = DATE(datetime('now', '+3 hours'))
       ORDER BY o.table_id, o.created_at ASC
     `);
 
