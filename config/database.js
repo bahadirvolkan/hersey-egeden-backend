@@ -27,6 +27,17 @@ function runMigrations(db) {
     `ALTER TABLE orders ADD COLUMN bill_requested_at DATETIME`,
     `ALTER TABLE orders ADD COLUMN closed_at DATETIME`,
     `ALTER TABLE menu_items ADD COLUMN "order" INTEGER DEFAULT 0`,
+    `ALTER TABLE orders ADD COLUMN payment_nakit DECIMAL(10,2) DEFAULT 0`,
+    `ALTER TABLE orders ADD COLUMN payment_kk DECIMAL(10,2) DEFAULT 0`,
+    `ALTER TABLE orders ADD COLUMN payment_yemek DECIMAL(10,2) DEFAULT 0`,
+    `CREATE TABLE IF NOT EXISTS expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      description TEXT,
+      amount DECIMAL(10,2) NOT NULL,
+      payment_method TEXT DEFAULT 'nakit',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
   let i = 0;
   const next = () => {
